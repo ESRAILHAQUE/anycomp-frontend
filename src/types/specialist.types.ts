@@ -1,46 +1,50 @@
-export enum SpecialistStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
+export enum VerificationStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  UNDER_REVIEW = 'under-review',
 }
 
 export interface Specialist {
   id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  bio?: string;
-  specialization?: string;
-  profile_image?: string;
-  status: SpecialistStatus;
-  additional_info?: Record<string, any>;
+  average_rating?: number;
+  is_draft: boolean;
+  total_number_of_ratings?: number;
+  title: string;
+  slug: string;
+  description?: string;
+  base_price: number;
+  platform_fee?: number;
+  final_price: number;
+  verification_status: VerificationStatus;
+  is_verified: boolean;
+  duration_days: number;
   service_offerings?: ServiceOffering[];
   media?: Media[];
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 export interface ServiceOffering {
   id: string;
-  service_name: string;
-  description?: string;
-  price?: number;
-  currency?: string;
-  specialist_id: string;
-  is_active: boolean;
+  specialists: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface Media {
   id: string;
+  specialists: string;
   file_name: string;
-  file_path: string;
-  file_type?: string;
-  file_size?: number;
+  file_size: number;
+  display_order: number;
   mime_type?: string;
-  specialist_id?: string;
+  media_type: string;
+  uploaded_at?: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 export interface SpecialistsResponse {
@@ -62,4 +66,3 @@ export interface SpecialistResponse {
     specialist: Specialist;
   };
 }
-

@@ -2,7 +2,6 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { specialistApi } from '@/services/api';
 import {
   Specialist,
-  SpecialistStatus,
   SpecialistsResponse,
 } from '@/types/specialist.types';
 
@@ -18,7 +17,7 @@ interface SpecialistsState {
     totalPages: number;
   };
   filters: {
-    status: SpecialistStatus | 'all';
+    status: 'all' | 'draft' | 'published';
     search: string;
   };
 }
@@ -46,7 +45,7 @@ export const fetchSpecialists = createAsyncThunk(
   async (params?: {
     page?: number;
     limit?: number;
-    status?: SpecialistStatus | 'all';
+    status?: 'all' | 'draft' | 'published';
     search?: string;
   }) => {
     const response = await specialistApi.getSpecialists(params);
@@ -88,8 +87,8 @@ export const deleteSpecialist = createAsyncThunk(
 
 export const togglePublishStatus = createAsyncThunk(
   'specialists/togglePublishStatus',
-  async ({ id, status }: { id: string; status?: SpecialistStatus }) => {
-    const response = await specialistApi.togglePublishStatus(id, status);
+  async ({ id, is_draft }: { id: string; is_draft?: boolean }) => {
+    const response = await specialistApi.togglePublishStatus(id, is_draft);
     return response.data.specialist;
   }
 );
@@ -101,7 +100,7 @@ const specialistsSlice = createSlice({
     setFilters: (
       state,
       action: PayloadAction<{
-        status?: SpecialistStatus | 'all';
+        status?: 'all' | 'draft' | 'published';
         search?: string;
       }>
     ) => {
@@ -202,4 +201,3 @@ const specialistsSlice = createSlice({
 export const { setFilters, setPage, clearCurrentSpecialist } =
   specialistsSlice.actions;
 export default specialistsSlice.reducer;
-

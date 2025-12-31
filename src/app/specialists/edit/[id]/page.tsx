@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Container,
   Box,
   Typography,
   TextField,
@@ -20,15 +19,17 @@ import {
 } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchSpecialistById, updateSpecialist, togglePublishStatus } from '@/store/slices/specialistsSlice';
-import { SpecialistStatus } from '@/types/specialist.types';
+import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
 const specialistSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
-  bio: z.string().optional(),
-  specialization: z.string().optional(),
-  status: z.nativeEnum(SpecialistStatus),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  base_price: z.string().min(1, 'Base price is required').refine((val) => !isNaN(parseFloat(val)), 'Must be a valid number'),
+  platform_fee: z.string().optional().refine((val) => !val || !isNaN(parseFloat(val)), 'Must be a valid number'),
+  duration_days: z.string().min(1, 'Duration is required').refine((val) => !isNaN(parseInt(val)) && parseInt(val) > 0, 'Must be a positive integer'),
+  is_draft: z.boolean(),
 });
 
 type SpecialistFormData = z.infer<typeof specialistSchema>;
@@ -52,7 +53,7 @@ export default function EditSpecialistPage() {
     resolver: zodResolver(specialistSchema),
   });
 
-  const status = watch('status');
+  const is_draft = watch('is_draft');
 
   useEffect(() => {
     if (id) {
@@ -63,35 +64,69 @@ export default function EditSpecialistPage() {
   useEffect(() => {
     if (currentSpecialist) {
       reset({
-        name: currentSpecialist.name,
-        email: currentSpecialist.email || '',
-        phone: currentSpecialist.phone || '',
-        bio: currentSpecialist.bio || '',
-        specialization: currentSpecialist.specialization || '',
-        status: currentSpecialist.status,
+        title: currentSpecialist.title,
+        description: currentSpecialist.description || '',
+        base_price: currentSpecialist.base_price.toString(),
+        platform_fee: currentSpecialist.platform_fee?.toString() || '0',
+        duration_days: currentSpecialist.duration_days.toString(),
+        is_draft: currentSpecialist.is_draft,
       });
     }
   }, [currentSpecialist, reset]);
 
   const onSubmit = async (data: SpecialistFormData) => {
     try {
-      await dispatch(updateSpecialist({ id, data })).unwrap();
-      router.push('/');
-    } catch (error) {
-      console.error('Error updating specialist:', error);
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: 'Do you want to update this specialist?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#222222',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, update it!',
+        cancelButtonText: 'Cancel',
+      });
+
+      if (result.isConfirmed) {
+        const payload = {
+          title: data.title,
+          description: data.description || '',
+          base_price: parseFloat(data.base_price),
+          platform_fee: data.platform_fee ? parseFloat(data.platform_fee) : 0,
+          duration_days: parseInt(data.duration_days),
+          is_draft: data.is_draft,
+        };
+        await dispatch(updateSpecialist({ id, data: payload })).unwrap();
+        toast.success('Specialist updated successfully!');
+        router.push('/');
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update specialist');
     }
   };
 
   const handlePublishToggle = async () => {
     try {
-      const newStatus =
-        status === SpecialistStatus.PUBLISHED
-          ? SpecialistStatus.DRAFT
-          : SpecialistStatus.PUBLISHED;
-      await dispatch(togglePublishStatus({ id, status: newStatus })).unwrap();
-      reset({ ...watch(), status: newStatus });
-    } catch (error) {
-      console.error('Error toggling publish status:', error);
+      const newIsDraft = !is_draft;
+      const action = newIsDraft ? 'unpublish' : 'publish';
+      const result = await Swal.fire({
+        title: `Are you sure?`,
+        text: `Do you want to ${action} this specialist?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#222222',
+        cancelButtonColor: '#d33',
+        confirmButtonText: `Yes, ${action} it!`,
+        cancelButtonText: 'Cancel',
+      });
+
+      if (result.isConfirmed) {
+        await dispatch(togglePublishStatus({ id, is_draft: newIsDraft })).unwrap();
+        reset({ ...watch(), is_draft: newIsDraft });
+        toast.success(`Specialist ${action}ed successfully!`);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update status');
     }
   };
 
@@ -101,30 +136,37 @@ export default function EditSpecialistPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="md" sx={{ py: 4, textAlign: 'center' }}>
-        <CircularProgress />
-      </Container>
+      <DashboardLayout>
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      </DashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Container>
+      <DashboardLayout>
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      </DashboardLayout>
     );
   }
 
   if (!currentSpecialist) {
     return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Alert severity="warning">Specialist not found</Alert>
-      </Container>
+      <DashboardLayout>
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+          <Alert severity="warning">Specialist not found</Alert>
+        </Box>
+      </DashboardLayout>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <DashboardLayout>
+      <Box sx={{ maxWidth: 800, mx: 'auto' }}>
       <Typography variant="h4" component="h1" fontWeight="bold" color="#222222" sx={{ mb: 4 }}>
         Edit Specialist
       </Typography>
@@ -135,53 +177,55 @@ export default function EditSpecialistPage() {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Name *"
-                {...register('name')}
-                error={!!errors.name}
-                helperText={errors.name?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                {...register('email')}
-                error={!!errors.email}
-                helperText={errors.email?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Phone"
-                {...register('phone')}
-                error={!!errors.phone}
-                helperText={errors.phone?.message}
+                label="Title *"
+                {...register('title')}
+                error={!!errors.title}
+                helperText={errors.title?.message}
               />
             </Grid>
 
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Specialization"
-                {...register('specialization')}
-                error={!!errors.specialization}
-                helperText={errors.specialization?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Bio"
+                label="Description"
                 multiline
                 rows={4}
-                {...register('bio')}
-                error={!!errors.bio}
-                helperText={errors.bio?.message}
+                {...register('description')}
+                error={!!errors.description}
+                helperText={errors.description?.message}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Base Price (RM) *"
+                type="number"
+                {...register('base_price')}
+                error={!!errors.base_price}
+                helperText={errors.base_price?.message}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Platform Fee (RM)"
+                type="number"
+                {...register('platform_fee')}
+                error={!!errors.platform_fee}
+                helperText={errors.platform_fee?.message}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Duration (Days) *"
+                type="number"
+                {...register('duration_days')}
+                error={!!errors.duration_days}
+                helperText={errors.duration_days?.message}
               />
             </Grid>
 
@@ -189,16 +233,12 @@ export default function EditSpecialistPage() {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={status === SpecialistStatus.PUBLISHED}
+                    checked={!is_draft}
                     onChange={handlePublishToggle}
                     color="primary"
                   />
                 }
-                label={
-                  status === SpecialistStatus.PUBLISHED
-                    ? 'Published'
-                    : 'Draft'
-                }
+                label={is_draft ? 'Draft' : 'Published'}
               />
             </Grid>
 
@@ -223,7 +263,7 @@ export default function EditSpecialistPage() {
           </Grid>
         </form>
       </Paper>
-    </Container>
+    </Box>
+    </DashboardLayout>
   );
 }
-

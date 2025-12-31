@@ -3,10 +3,15 @@ import {
   Specialist,
   SpecialistsResponse,
   SpecialistResponse,
-  SpecialistStatus,
 } from '@/types/specialist.types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+// Ensure API URL always ends with /api
+const getApiUrl = () => {
+  const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  return url.endsWith('/api') ? url : `${url}/api`;
+};
+
+const API_URL = getApiUrl();
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -30,7 +35,7 @@ export const specialistApi = {
   getSpecialists: async (params?: {
     page?: number;
     limit?: number;
-    status?: SpecialistStatus | 'all';
+    status?: 'all' | 'draft' | 'published';
     search?: string;
   }): Promise<SpecialistsResponse> => {
     const response = await apiClient.get<SpecialistsResponse>('/specialists', {
@@ -78,11 +83,11 @@ export const specialistApi = {
   // Toggle publish status
   togglePublishStatus: async (
     id: string,
-    status?: SpecialistStatus
+    is_draft?: boolean
   ): Promise<SpecialistResponse> => {
     const response = await apiClient.patch<SpecialistResponse>(
       `/specialists/${id}/publish`,
-      { status }
+      { is_draft }
     );
     return response.data;
   },

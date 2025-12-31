@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Container,
   Box,
   Typography,
   TextField,
@@ -15,15 +14,16 @@ import {
 } from '@mui/material';
 import { useAppDispatch } from '@/store/hooks';
 import { createSpecialist } from '@/store/slices/specialistsSlice';
-import { SpecialistStatus } from '@/types/specialist.types';
+import { toast } from 'react-toastify';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
 const specialistSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
-  bio: z.string().optional(),
-  specialization: z.string().optional(),
-  status: z.nativeEnum(SpecialistStatus).default(SpecialistStatus.DRAFT),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  base_price: z.string().min(1, 'Base price is required').refine((val) => !isNaN(parseFloat(val)), 'Must be a valid number'),
+  platform_fee: z.string().optional().refine((val) => !val || !isNaN(parseFloat(val)), 'Must be a valid number'),
+  duration_days: z.string().min(1, 'Duration is required').refine((val) => !isNaN(parseInt(val)) && parseInt(val) > 0, 'Must be a positive integer'),
+  is_draft: z.boolean().default(true),
 });
 
 type SpecialistFormData = z.infer<typeof specialistSchema>;
@@ -38,16 +38,25 @@ export default function CreateSpecialistPage() {
   } = useForm<SpecialistFormData>({
     resolver: zodResolver(specialistSchema),
     defaultValues: {
-      status: SpecialistStatus.DRAFT,
+      is_draft: true,
     },
   });
 
   const onSubmit = async (data: SpecialistFormData) => {
     try {
-      await dispatch(createSpecialist(data)).unwrap();
+      const payload = {
+        title: data.title,
+        description: data.description || '',
+        base_price: parseFloat(data.base_price),
+        platform_fee: data.platform_fee ? parseFloat(data.platform_fee) : 0,
+        duration_days: parseInt(data.duration_days),
+        is_draft: data.is_draft,
+      };
+      await dispatch(createSpecialist(payload)).unwrap();
+      toast.success('Specialist created successfully!');
       router.push('/');
-    } catch (error) {
-      console.error('Error creating specialist:', error);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to create specialist');
     }
   };
 
@@ -56,64 +65,67 @@ export default function CreateSpecialistPage() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" fontWeight="bold" color="#222222" sx={{ mb: 4 }}>
-        Create Specialist
-      </Typography>
+    <DashboardLayout>
+      <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+        <Typography variant="h4" component="h1" fontWeight="bold" color="#222222" sx={{ mb: 4 }}>
+          Create Specialist
+        </Typography>
 
-      <Paper sx={{ p: 4 }}>
+        <Paper sx={{ p: 4 }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Name *"
-                {...register('name')}
-                error={!!errors.name}
-                helperText={errors.name?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                {...register('email')}
-                error={!!errors.email}
-                helperText={errors.email?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Phone"
-                {...register('phone')}
-                error={!!errors.phone}
-                helperText={errors.phone?.message}
+                label="Title *"
+                {...register('title')}
+                error={!!errors.title}
+                helperText={errors.title?.message}
               />
             </Grid>
 
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Specialization"
-                {...register('specialization')}
-                error={!!errors.specialization}
-                helperText={errors.specialization?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Bio"
+                label="Description"
                 multiline
                 rows={4}
-                {...register('bio')}
-                error={!!errors.bio}
-                helperText={errors.bio?.message}
+                {...register('description')}
+                error={!!errors.description}
+                helperText={errors.description?.message}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Base Price (RM) *"
+                type="number"
+                {...register('base_price')}
+                error={!!errors.base_price}
+                helperText={errors.base_price?.message}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Platform Fee (RM)"
+                type="number"
+                {...register('platform_fee')}
+                error={!!errors.platform_fee}
+                helperText={errors.platform_fee?.message}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Duration (Days) *"
+                type="number"
+                {...register('duration_days')}
+                error={!!errors.duration_days}
+                helperText={errors.duration_days?.message}
               />
             </Grid>
 
@@ -138,7 +150,7 @@ export default function CreateSpecialistPage() {
           </Grid>
         </form>
       </Paper>
-    </Container>
+    </Box>
+    </DashboardLayout>
   );
 }
-
