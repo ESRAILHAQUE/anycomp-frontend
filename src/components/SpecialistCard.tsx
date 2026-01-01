@@ -11,9 +11,28 @@ interface SpecialistCardProps {
 export default function SpecialistCard({ specialist, onClick }: SpecialistCardProps) {
   // Get the primary image from media array
   const primaryImage = specialist.media?.find((m) => m.display_order === 0) || specialist.media?.[0];
-  // Use file_path if available, otherwise construct from file_name or use placeholder
-  const imageUrl = primaryImage?.file_path 
-    || (primaryImage?.file_name ? `/uploads/${primaryImage.file_name}` : '/placeholder-image.jpg');
+  
+  // Construct image URL
+  // Cloudinary URLs are full URLs (https://res.cloudinary.com/...)
+  // Local URLs are relative paths (/uploads/...)
+  let imageUrl = '/placeholder-image.jpg';
+  if (primaryImage?.file_path) {
+    if (primaryImage.file_path.startsWith('http://') || primaryImage.file_path.startsWith('https://')) {
+      // Cloudinary or external URL
+      imageUrl = primaryImage.file_path;
+    } else if (primaryImage.file_path.startsWith('/uploads/')) {
+      // Local development URL - prepend API URL
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      imageUrl = `${apiUrl}${primaryImage.file_path}`;
+    } else {
+      // Fallback
+      imageUrl = primaryImage.file_path;
+    }
+  } else if (primaryImage?.file_name) {
+    // Fallback to file_name
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    imageUrl = `${apiUrl}/uploads/${primaryImage.file_name}`;
+  }
 
   // Extract specialist name from title (assuming format: "Name - Company Secretary")
   const nameMatch = specialist.title.match(/^([^-]+)/);

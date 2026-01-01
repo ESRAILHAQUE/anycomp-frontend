@@ -178,7 +178,7 @@ export default function SpecialistsTableNew({
                         : '-'}
                     </TableCell>
                     <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, display: { xs: 'none', md: 'table-cell' } }}>
-                      {Math.floor(Math.random() * 10000)}
+                      {specialist.purchases_count || 0}
                     </TableCell>
                     <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                       {specialist.duration_days} Days

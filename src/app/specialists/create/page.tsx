@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,6 +26,7 @@ import { useAppDispatch } from '@/store/hooks';
 import { createSpecialist } from '@/store/slices/specialistsSlice';
 import { toast } from 'react-toastify';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ImageUpload from '@/components/forms/ImageUpload';
 
 const specialistSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -40,6 +42,9 @@ type SpecialistFormData = z.infer<typeof specialistSchema>;
 export default function CreateSpecialistPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const [images, setImages] = useState<(File | null)[]>([]);
+  const [primaryImageIndex, setPrimaryImageIndex] = useState<number | null>(null);
+  
   const {
     register,
     handleSubmit,
@@ -59,6 +64,26 @@ export default function CreateSpecialistPage() {
   const total = basePrice + platformFee;
   const yourReturns = basePrice;
 
+  const handleImageChange = (file: File | null, index: number) => {
+    const newImages = [...images];
+    newImages[index] = file;
+    setImages(newImages);
+  };
+
+  const handleImageDelete = (index: number) => {
+    const newImages = [...images];
+    newImages[index] = null;
+    setImages(newImages.filter((img, i) => i !== index || img !== null));
+  };
+
+  const handleAddImageSlot = () => {
+    setImages([...images, null]);
+  };
+
+  const handleSetPrimary = (index: number) => {
+    setPrimaryImageIndex(index);
+  };
+
   const onSubmit = async (data: SpecialistFormData) => {
     try {
       const payload = {
@@ -69,7 +94,23 @@ export default function CreateSpecialistPage() {
         duration_days: parseInt(data.duration_days),
         is_draft: data.is_draft,
       };
-      await dispatch(createSpecialist(payload)).unwrap();
+
+      // If images are present, use FormData
+      const imageFiles = images.filter((img): img is File => img !== null);
+      
+      if (imageFiles.length > 0) {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(payload));
+        
+        imageFiles.forEach((file) => {
+          formData.append('images', file);
+        });
+
+        await dispatch(createSpecialist(formData as any)).unwrap();
+      } else {
+        await dispatch(createSpecialist(payload)).unwrap();
+      }
+      
       toast.success('Specialist created successfully!');
       router.push('/dashboard');
     } catch (error: any) {
@@ -115,66 +156,66 @@ export default function CreateSpecialistPage() {
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* Image Upload Section */}
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="subtitle2" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
-                Service Image
-              </Typography>
-              <Box
-                sx={{
-                  border: '2px dashed #e0e0e0',
-                  borderRadius: '8px',
-                  p: 6,
-                  textAlign: 'center',
-                  backgroundColor: '#fafafa',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    borderColor: '#1976d2',
-                    backgroundColor: '#f5f5f5',
-                  },
-                }}
-              >
-                <CloudUploadIcon sx={{ fontSize: 48, color: '#999', mb: 2 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Upload an image for your service listing in PNG, JPG or JPEG up to 4MB
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle2" fontWeight="bold" color="#222222">
+                  Service Image
                 </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddImageSlot}
+                  sx={{
+                    borderColor: '#1976d2',
+                    color: '#1976d2',
+                    textTransform: 'none',
+                  }}
+                >
+                  Add Image
+                </Button>
               </Box>
 
-              {/* Image Thumbnails */}
+              {/* Image Upload Components */}
               <Box sx={{ 
                 display: 'flex', 
-                gap: 2, 
-                mt: 3,
-                flexWrap: 'wrap',
+                flexDirection: 'column',
+                gap: 2,
               }}>
-                <Box
-                  sx={{
-                    width: { xs: '100%', sm: 200 },
-                    height: { xs: 150, sm: 120 },
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '8px',
-                    backgroundColor: '#f5f5f5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <AddIcon sx={{ color: '#999' }} />
-                </Box>
-                <Box
-                  sx={{
-                    width: { xs: '100%', sm: 200 },
-                    height: { xs: 150, sm: 120 },
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '8px',
-                    backgroundColor: '#f5f5f5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <AddIcon sx={{ color: '#999' }} />
-                </Box>
+                {images.length === 0 ? (
+                  <Box
+                    sx={{
+                      border: '2px dashed #e0e0e0',
+                      borderRadius: '8px',
+                      p: 6,
+                      textAlign: 'center',
+                      backgroundColor: '#fafafa',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        borderColor: '#1976d2',
+                        backgroundColor: '#f5f5f5',
+                      },
+                    }}
+                    onClick={handleAddImageSlot}
+                  >
+                    <CloudUploadIcon sx={{ fontSize: 48, color: '#999', mb: 2 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      Upload an image for your service listing in PNG, JPG or JPEG up to 4MB
+                    </Typography>
+                  </Box>
+                ) : (
+                  images.map((image, index) => (
+                    <ImageUpload
+                      key={index}
+                      label={`Image ${index + 1}`}
+                      index={index}
+                      value={image}
+                      onChange={handleImageChange}
+                      onDelete={handleImageDelete}
+                      onSetPrimary={handleSetPrimary}
+                      isPrimary={primaryImageIndex === index}
+                    />
+                  ))
+                )}
               </Box>
             </Paper>
 

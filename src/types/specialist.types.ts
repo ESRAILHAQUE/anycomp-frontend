@@ -10,6 +10,7 @@ export interface Specialist {
   average_rating?: number;
   is_draft: boolean;
   total_number_of_ratings?: number;
+  purchases_count?: number;
   title: string;
   slug: string;
   description?: string;

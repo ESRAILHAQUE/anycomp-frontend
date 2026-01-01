@@ -59,11 +59,21 @@ export const specialistApi = {
 
   // Create specialist
   createSpecialist: async (
-    data: Partial<Specialist>
+    data: Partial<Specialist> | FormData
   ): Promise<SpecialistResponse> => {
+    // Check if data is FormData (for file uploads)
+    const isFormData = data instanceof FormData;
+    
     const response = await apiClient.post<SpecialistResponse>(
       "/specialists",
-      data
+      data,
+      isFormData
+        ? {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        : undefined
     );
     return response.data;
   },
