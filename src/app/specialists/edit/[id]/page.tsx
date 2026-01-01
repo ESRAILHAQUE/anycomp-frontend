@@ -848,8 +848,8 @@ export default function EditSpecialistPage() {
               </Select>
             </FormControl>
             
-            {/* Selected Offerings List */}
-            {selectedOfferings.length > 0 && (
+            {/* Selected Offerings List - Only show selected ones */}
+            {selectedOfferings.length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {selectedOfferings.map((offeringValue) => {
                   const offering = serviceOfferings.find((o) => o.value === offeringValue);
@@ -889,47 +889,10 @@ export default function EditSpecialistPage() {
                   );
                 })}
               </Box>
-            )}
-
-            {/* Available Offerings List */}
-            {selectedOfferings.length === 0 && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {serviceOfferings.map((offering) => (
-                  <Box
-                    key={offering.value}
-                    sx={{
-                      p: 2,
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '8px',
-                      backgroundColor: '#fff',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 2,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: '#fafafa',
-                      },
-                    }}
-                    onClick={() => {
-                      if (!selectedOfferings.includes(offering.value)) {
-                        setSelectedOfferings([...selectedOfferings, offering.value]);
-                      }
-                    }}
-                  >
-                    <Box sx={{ color: '#1976d2', mt: 0.5 }}>
-                      {offering.icon}
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" fontWeight="bold" color="#222222" sx={{ mb: 0.5 }}>
-                        {offering.label}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {offering.description}
-                      </Typography>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                No offerings selected. Use the dropdown above to add offerings.
+              </Typography>
             )}
           </Paper>
 
