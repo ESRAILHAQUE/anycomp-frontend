@@ -1,14 +1,19 @@
-import axios from 'axios';
+import axios from "axios";
 import {
   Specialist,
   SpecialistsResponse,
   SpecialistResponse,
-} from '@/types/specialist.types';
+} from "@/types/specialist.types";
 
 // Ensure API URL always ends with /api
 const getApiUrl = () => {
-  const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-  return url.endsWith('/api') ? url : `${url}/api`;
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (!url) {
+    throw new Error("NEXT_PUBLIC_API_URL environment variable is required");
+  }
+  // Remove trailing slash if present
+  const cleanUrl = url.replace(/\/$/, "");
+  return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
 };
 
 const API_URL = getApiUrl();
@@ -16,7 +21,7 @@ const API_URL = getApiUrl();
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -25,7 +30,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const message =
-      error.response?.data?.message || error.message || 'An error occurred';
+      error.response?.data?.message || error.message || "An error occurred";
     return Promise.reject(new Error(message));
   }
 );
@@ -35,10 +40,10 @@ export const specialistApi = {
   getSpecialists: async (params?: {
     page?: number;
     limit?: number;
-    status?: 'all' | 'draft' | 'published';
+    status?: "all" | "draft" | "published";
     search?: string;
   }): Promise<SpecialistsResponse> => {
-    const response = await apiClient.get<SpecialistsResponse>('/specialists', {
+    const response = await apiClient.get<SpecialistsResponse>("/specialists", {
       params,
     });
     return response.data;
@@ -57,7 +62,7 @@ export const specialistApi = {
     data: Partial<Specialist>
   ): Promise<SpecialistResponse> => {
     const response = await apiClient.post<SpecialistResponse>(
-      '/specialists',
+      "/specialists",
       data
     );
     return response.data;
@@ -92,4 +97,3 @@ export const specialistApi = {
     return response.data;
   },
 };
-
