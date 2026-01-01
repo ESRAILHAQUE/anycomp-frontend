@@ -30,6 +30,8 @@ export interface Specialist {
 export interface ServiceOffering {
   id: string;
   specialists: string;
+  name: string;
+  description?: string;
   created_at: string;
   updated_at: string;
 }

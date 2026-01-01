@@ -21,6 +21,7 @@ import {
   Edit as EditIcon,
   CloudUpload as CloudUploadIcon,
   Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useAppDispatch } from '@/store/hooks';
 import { createSpecialist } from '@/store/slices/specialistsSlice';
@@ -44,6 +45,7 @@ export default function CreateSpecialistPage() {
   const dispatch = useAppDispatch();
   const [images, setImages] = useState<(File | null)[]>([]);
   const [primaryImageIndex, setPrimaryImageIndex] = useState<number | null>(null);
+  const [serviceOfferings, setServiceOfferings] = useState<Array<{ name: string; description: string }>>([]);
   
   const {
     register,
@@ -84,16 +86,37 @@ export default function CreateSpecialistPage() {
     setPrimaryImageIndex(index);
   };
 
-  const onSubmit = async (data: SpecialistFormData) => {
+  const handleAddOffering = () => {
+    setServiceOfferings([...serviceOfferings, { name: '', description: '' }]);
+  };
+
+  const handleUpdateOffering = (index: number, field: 'name' | 'description', value: string) => {
+    const updated = [...serviceOfferings];
+    updated[index] = { ...updated[index], [field]: value };
+    setServiceOfferings(updated);
+  };
+
+  const handleDeleteOffering = (index: number) => {
+    setServiceOfferings(serviceOfferings.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async (data: SpecialistFormData, isDraft: boolean) => {
     try {
-      const payload = {
+      // Filter out empty offerings
+      const validOfferings = serviceOfferings.filter(offering => offering.name.trim() !== '');
+      
+      const payload: any = {
         title: data.title,
         description: data.description || '',
         base_price: parseFloat(data.base_price),
         platform_fee: data.platform_fee ? parseFloat(data.platform_fee) : 0,
         duration_days: parseInt(data.duration_days),
-        is_draft: data.is_draft,
+        is_draft: isDraft,
       };
+
+      if (validOfferings.length > 0) {
+        payload.service_offerings = validOfferings;
+      }
 
       // If images are present, use FormData
       const imageFiles = images.filter((img): img is File => img !== null);
@@ -111,11 +134,15 @@ export default function CreateSpecialistPage() {
         await dispatch(createSpecialist(payload)).unwrap();
       }
       
-      toast.success('Specialist created successfully!');
+      toast.success(isDraft ? 'Specialist saved as draft!' : 'Specialist published successfully!');
       router.push('/dashboard');
     } catch (error: any) {
       toast.error(error?.message || 'Failed to create specialist');
     }
+  };
+
+  const onSubmit = async (data: SpecialistFormData) => {
+    await handleSave(data, false);
   };
 
   const handleCancel = () => {
@@ -242,27 +269,80 @@ export default function CreateSpecialistPage() {
 
             {/* Additional Offerings */}
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="subtitle2" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
-                Additional Offerings
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle2" fontWeight="bold" color="#222222">
+                  Additional Offerings
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddOffering}
+                  sx={{
+                    borderColor: '#1976d2',
+                    color: '#1976d2',
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: '#1565c0',
+                      backgroundColor: '#e3f2fd',
+                    },
+                  }}
+                >
+                  Add Offering
+                </Button>
+              </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Enhance your service by adding additional offerings
               </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                sx={{
-                  borderColor: '#1976d2',
-                  color: '#1976d2',
-                  textTransform: 'none',
-                  '&:hover': {
-                    borderColor: '#1565c0',
-                    backgroundColor: '#e3f2fd',
-                  },
-                }}
-              >
-                Add Offering
-              </Button>
+              
+              {serviceOfferings.length > 0 && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                  {serviceOfferings.map((offering, index) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        p: 2,
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                        backgroundColor: '#fafafa',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="body2" fontWeight="bold" color="#222222">
+                          Offering {index + 1}
+                        </Typography>
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteOffering(index)}
+                          sx={{ minWidth: 'auto', p: 0.5 }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </Button>
+                      </Box>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Offering Name"
+                        placeholder="e.g., Company Name Search"
+                        value={offering.name}
+                        onChange={(e) => handleUpdateOffering(index, 'name', e.target.value)}
+                        sx={{ mb: 1 }}
+                      />
+                      <TextField
+                        fullWidth
+                        size="small"
+                        multiline
+                        rows={2}
+                        label="Description"
+                        placeholder="Brief description of this offering"
+                        value={offering.description}
+                        onChange={(e) => handleUpdateOffering(index, 'description', e.target.value)}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              )}
             </Paper>
 
             {/* Company Secretary Section */}
@@ -365,6 +445,8 @@ export default function CreateSpecialistPage() {
                 variant="outlined"
                 startIcon={<EditIcon />}
                 fullWidth
+                onClick={handleSubmit((data) => handleSave(data, true))}
+                disabled={isSubmitting}
                 sx={{
                   borderColor: '#1976d2',
                   color: '#1976d2',
@@ -375,7 +457,7 @@ export default function CreateSpecialistPage() {
                   },
                 }}
               >
-                Edit
+                {isSubmitting ? 'Saving...' : 'Save as Draft'}
               </Button>
               <Button
                 variant="contained"
