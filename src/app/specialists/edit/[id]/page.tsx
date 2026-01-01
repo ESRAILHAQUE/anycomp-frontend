@@ -366,13 +366,258 @@ export default function EditSpecialistPage() {
         display: 'flex', 
         flexDirection: { xs: 'column', lg: 'row' },
         gap: { xs: 2, sm: 3 }, 
-        maxWidth: 1400, 
+        maxWidth: 1600, 
         mx: 'auto', 
-        p: { xs: 2, sm: 3 } 
+        p: { xs: 2, sm: 3 },
+        minHeight: 'calc(100vh - 200px)',
       }}>
-        {/* Main Content Area */}
+        {/* Left Sidebar - Form Fields */}
+        <Box sx={{ 
+          width: { xs: '100%', lg: 450 },
+          maxHeight: { xs: 'none', lg: 'calc(100vh - 100px)' },
+          overflowY: { xs: 'visible', lg: 'auto' },
+          pr: { xs: 0, lg: 2 },
+        }}>
+          <Paper sx={{ 
+            p: 3, 
+            position: { xs: 'static', lg: 'sticky' },
+            top: 20,
+            maxHeight: { xs: 'none', lg: 'calc(100vh - 120px)' },
+            overflowY: { xs: 'visible', lg: 'auto' },
+          }}>
+            <Typography variant="h5" fontWeight="bold" color="#222222" sx={{ mb: 3 }}>
+              Edit Specialist
+            </Typography>
+
+            {/* TITLE Section */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                TITLE
+              </Typography>
+              <TextField
+                fullWidth
+                label="Title"
+                placeholder="Enter your service title"
+                {...register('title')}
+                error={!!errors.title}
+                helperText={errors.title?.message}
+                size="small"
+              />
+            </Box>
+
+            {/* DESCRIPTION Section */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                DESCRIPTION
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="Description"
+                placeholder="Describe your service here"
+                {...register('description')}
+                error={!!errors.description}
+                helperText={errors.description?.message || '(500 words)'}
+                inputProps={{ maxLength: 500 * 5 }}
+                size="small"
+              />
+            </Box>
+
+            {/* Price Section */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                Price
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', sm: 'row' } }}>
+                <FormControl sx={{ minWidth: { xs: '100%', sm: 120 } }} size="small">
+                  <InputLabel>Currency</InputLabel>
+                  <Select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    label="Currency"
+                  >
+                    <MenuItem value="MYR">MYR</MenuItem>
+                    <MenuItem value="USD">USD</MenuItem>
+                    <MenuItem value="SGD">SGD</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Price"
+                  type="number"
+                  placeholder="0.00"
+                  {...register('base_price')}
+                  error={!!errors.base_price}
+                  helperText={errors.base_price?.message}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">{currency}</InputAdornment>,
+                  }}
+                  size="small"
+                />
+              </Box>
+            </Box>
+
+            {/* Estimated Completion Time Section */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                Estimated Completion Time ({totalDays} Total Days)
+              </Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel>Estimated Completion Time (Days)</InputLabel>
+                <Controller
+                  name="duration_days"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label="Estimated Completion Time (Days)">
+                      {durationOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+              </FormControl>
+            </Box>
+
+            {/* Supported Company Types Section */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                Supported Company Types
+              </Typography>
+              <MultiSelectDropdown
+                label="Supported Company types"
+                placeholder="Select company types"
+                options={companyTypes}
+                selected={selectedCompanyTypes}
+                onChange={setSelectedCompanyTypes}
+              />
+            </Box>
+
+            {/* Service Category Section */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                Service Category
+              </Typography>
+              <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+                Note: Can only choose 1
+              </Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel>Service category</InputLabel>
+                <Select
+                  value={selectedServiceCategory}
+                  onChange={(e) => setSelectedServiceCategory(e.target.value)}
+                  label="Service category"
+                >
+                  {serviceCategories.map((category) => (
+                    <MenuItem key={category} value={category}>
+                      {category}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {/* Service Images Section */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+                Service Images
+              </Typography>
+              {[0, 1, 2].map((index) => (
+                <Box key={index} sx={{ mb: 2 }}>
+                  <ImageUpload
+                    label={`Service Image (${index === 0 ? '1st' : index === 1 ? '2nd' : '3rd'})`}
+                    index={index}
+                    value={images[index]}
+                    onChange={handleImageChange}
+                    onDelete={handleImageDelete}
+                    onSetPrimary={handleSetPrimary}
+                    isPrimary={primaryImageIndex === index}
+                  />
+                </Box>
+              ))}
+            </Box>
+
+            {/* Additional Offerings Section */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                Additional Offerings
+              </Typography>
+              <FormControl fullWidth sx={{ mb: 2 }} size="small">
+                <InputLabel>Add Service Offering</InputLabel>
+                <Select
+                  value=""
+                  label="Add Service Offering"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value && !selectedOfferings.includes(value)) {
+                      setSelectedOfferings([...selectedOfferings, value]);
+                    }
+                  }}
+                >
+                  <MenuItem value="">Select an offering</MenuItem>
+                  {serviceOfferings
+                    .filter((o) => !selectedOfferings.includes(o.value))
+                    .map((offering) => (
+                      <MenuItem key={offering.value} value={offering.value}>
+                        {offering.label}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+              {selectedOfferings.length > 0 && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {selectedOfferings.map((offeringValue) => {
+                    const offering = serviceOfferings.find((o) => o.value === offeringValue);
+                    if (!offering) return null;
+                    return (
+                      <Chip
+                        key={offeringValue}
+                        label={offering.label}
+                        onDelete={() => setSelectedOfferings(selectedOfferings.filter((v) => v !== offeringValue))}
+                        sx={{ mb: 0.5 }}
+                      />
+                    );
+                  })}
+                </Box>
+              )}
+            </Box>
+
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+              <Button
+                variant="outlined"
+                onClick={handleSubmit((data) => onSubmit(data))}
+                disabled={isSubmitting}
+                fullWidth
+                sx={{
+                  borderColor: '#1976d2',
+                  color: '#1976d2',
+                  textTransform: 'none',
+                }}
+              >
+                Save as Draft
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handlePublishClick}
+                disabled={isSubmitting}
+                fullWidth
+                sx={{
+                  backgroundColor: '#1976d2',
+                  textTransform: 'none',
+                }}
+              >
+                Publish
+              </Button>
+            </Box>
+          </Paper>
+        </Box>
+
+        {/* Right Main Content Area - Preview */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          {/* Header with Edit and Publish buttons */}
+          {/* Header */}
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' },
@@ -388,48 +633,8 @@ export default function EditSpecialistPage() {
               color="#222222"
               sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem', lg: '2rem' } }}
             >
-              Register a new company | Private Limited - Sdn Bhd
+              {watch('title') || currentSpecialist.title || 'Preview'}
             </Typography>
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 1,
-              width: { xs: '100%', sm: 'auto' },
-            }}>
-              <Button
-                variant="outlined"
-                startIcon={<EditIcon />}
-                onClick={() => setEditDrawerOpen(true)}
-                fullWidth={false}
-                sx={{
-                  borderColor: '#1976d2',
-                  color: '#1976d2',
-                  textTransform: 'none',
-                  flex: { xs: 1, sm: 'none' },
-                  '&:hover': {
-                    borderColor: '#1565c0',
-                    backgroundColor: '#e3f2fd',
-                  },
-                }}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handlePublishClick}
-                disabled={isSubmitting}
-                fullWidth={false}
-                sx={{
-                  backgroundColor: '#1976d2',
-                  textTransform: 'none',
-                  flex: { xs: 1, sm: 'none' },
-                  '&:hover': {
-                    backgroundColor: '#1565c0',
-                  },
-                }}
-              >
-                Publish
-              </Button>
-            </Box>
           </Box>
 
           {/* Service Images Section - 3 upload fields */}
@@ -728,7 +933,175 @@ export default function EditSpecialistPage() {
             )}
           </Paper>
 
-          {/* Company Secretary Section */}
+          {/* Preview - Images */}
+          {images.filter(img => img !== null).length > 0 && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+                Service Images
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                {images.map((img, index) => {
+                  if (!img) return null;
+                  const imgUrl = typeof img === 'string' ? img : URL.createObjectURL(img);
+                  return (
+                    <Box
+                      key={index}
+                      sx={{
+                        width: { xs: '100%', sm: 200 },
+                        height: 150,
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        border: primaryImageIndex === index ? '3px solid #1976d2' : '1px solid #e0e0e0',
+                      }}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Service ${index + 1}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Paper>
+          )}
+
+          {/* Preview - Description */}
+          {watch('description') && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+                Description
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                {watch('description')}
+              </Typography>
+            </Paper>
+          )}
+
+          {/* Preview - Price */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+              Professional Fee
+            </Typography>
+            <Typography
+              variant="h4"
+              fontWeight="bold"
+              color="#222222"
+              sx={{ mb: 3, textDecoration: 'underline' }}
+            >
+              {currency} {watch('base_price') || currentSpecialist.base_price || '0.00'}
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Base price:
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {currency} {watch('base_price') || currentSpecialist.base_price || '0.00'}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Service processing fee:
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {currency} {currentSpecialist.platform_fee || '0.00'}
+                </Typography>
+              </Box>
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" fontWeight="bold">
+                  Total:
+                </Typography>
+                <Typography variant="body2" fontWeight="bold">
+                  {currency} {(
+                    parseFloat(watch('base_price') || currentSpecialist.base_price?.toString() || '0') +
+                    parseFloat(currentSpecialist.platform_fee?.toString() || '0')
+                  ).toFixed(2)}
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+
+          {/* Preview - Company Types */}
+          {selectedCompanyTypes.length > 0 && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+                Supported Company Types
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {selectedCompanyTypes.map((typeValue) => {
+                  const type = companyTypes.find((t) => t.value === typeValue);
+                  if (!type) return null;
+                  return (
+                    <Box key={typeValue} sx={{ p: 2, backgroundColor: '#fafafa', borderRadius: '8px' }}>
+                      <Typography variant="body2" fontWeight="bold" color="#222222" sx={{ mb: 0.5 }}>
+                        {type.label}:
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {type.description}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Paper>
+          )}
+
+          {/* Preview - Service Category */}
+          {selectedServiceCategory && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+                Service Category
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {selectedServiceCategory}
+              </Typography>
+            </Paper>
+          )}
+
+          {/* Preview - Additional Offerings */}
+          {selectedOfferings.length > 0 && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+                Additional Offerings
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {selectedOfferings.map((offeringValue) => {
+                  const offering = serviceOfferings.find((o) => o.value === offeringValue);
+                  if (!offering) return null;
+                  return (
+                    <Box
+                      key={offeringValue}
+                      sx={{
+                        p: 2,
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                        backgroundColor: '#fafafa',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 2,
+                      }}
+                    >
+                      <Box sx={{ color: '#1976d2', mt: 0.5 }}>
+                        {offering.icon}
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" fontWeight="bold" color="#222222" sx={{ mb: 0.5 }}>
+                          {offering.label}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {offering.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Paper>
+          )}
+
+          {/* Preview - Company Secretary */}
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 3 }}>
               Company Secretary
@@ -803,68 +1176,6 @@ export default function EditSpecialistPage() {
                     Micsa
                   </Typography>
                 </Box>
-              </Box>
-            </Box>
-          </Paper>
-        </Box>
-
-        {/* Right Sidebar - Professional Fee */}
-        <Box sx={{ 
-          width: { xs: '100%', lg: 350 },
-          order: { xs: -1, lg: 0 },
-        }}>
-          <Paper sx={{ 
-            p: { xs: 2, sm: 3 }, 
-            position: { xs: 'static', lg: 'sticky' }, 
-            top: 20 
-          }}>
-            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 1 }}>
-              Professional Fee
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Set a rate for your service
-            </Typography>
-            <Typography
-              variant="h4"
-              fontWeight="bold"
-              color="#222222"
-              sx={{ mb: 3, textDecoration: 'underline' }}
-            >
-              RM {currentSpecialist.base_price || '0.00'}
-            </Typography>
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Base price:
-                </Typography>
-                <Typography variant="body2" fontWeight="medium">
-                  RM {currentSpecialist.base_price || '0.00'}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Service processing fee:
-                </Typography>
-                <Typography variant="body2" fontWeight="medium">
-                  RM {currentSpecialist.platform_fee || '0.00'}
-                </Typography>
-              </Box>
-              <Divider sx={{ my: 2 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" fontWeight="bold">
-                  Total:
-                </Typography>
-                <Typography variant="body2" fontWeight="bold">
-                  RM {currentSpecialist.final_price || '0.00'}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Your returns:
-                </Typography>
-                <Typography variant="body2" fontWeight="medium">
-                  RM {currentSpecialist.base_price || '0.00'}
-                </Typography>
               </Box>
             </Box>
           </Paper>
