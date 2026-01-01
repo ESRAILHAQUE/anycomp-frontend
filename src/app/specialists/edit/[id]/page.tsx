@@ -556,8 +556,9 @@ export default function EditSpecialistPage() {
             </Typography>
             <MultiSelectDropdown
               label="Supported Company types"
+              placeholder="Select company types"
               options={companyTypes}
-              selectedValues={selectedCompanyTypes}
+              selected={selectedCompanyTypes}
               onChange={setSelectedCompanyTypes}
             />
             {selectedCompanyTypes.length > 0 && (
