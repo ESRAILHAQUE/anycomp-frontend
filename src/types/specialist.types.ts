@@ -17,6 +17,9 @@ export interface Specialist {
   base_price: number;
   platform_fee?: number;
   final_price: number;
+  currency?: string;
+  service_category?: string;
+  company_types?: string | string[];
   verification_status: VerificationStatus;
   is_verified: boolean;
   duration_days: number;

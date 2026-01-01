@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -34,9 +34,26 @@ export default function ImageUpload({
   onSetPrimary,
   isPrimary = false,
 }: ImageUploadProps) {
-  const [preview, setPreview] = useState<string | null>(
-    typeof value === 'string' ? value : null
-  );
+  const getPreview = (val: File | string | null | undefined): string | null => {
+    if (!val) return null;
+    if (typeof val === 'string') return val;
+    return URL.createObjectURL(val);
+  };
+
+  const [preview, setPreview] = useState<string | null>(getPreview(value));
+
+  // Update preview when value changes
+  useEffect(() => {
+    const newPreview = getPreview(value);
+    setPreview(newPreview);
+    
+    // Cleanup object URL if it was created
+    return () => {
+      if (value && typeof value !== 'string' && newPreview && newPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(newPreview);
+      }
+    };
+  }, [value]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

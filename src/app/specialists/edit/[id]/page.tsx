@@ -18,6 +18,10 @@ import {
   FormControl,
   InputLabel,
   Divider,
+  InputAdornment,
+  Chip,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Business as BusinessIcon,
@@ -31,6 +35,9 @@ import {
   Assignment as AssignmentIcon,
   LocalShipping as LocalShippingIcon,
   Chat as ChatIcon,
+  Info as InfoIcon,
+  Delete as DeleteIcon,
+  CloudUpload as CloudUploadIcon,
 } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchSpecialistById, updateSpecialist, togglePublishStatus } from '@/store/slices/specialistsSlice';
@@ -45,7 +52,11 @@ import { Edit as EditIcon } from '@mui/icons-material';
 
 const specialistSchema = z.object({
   title: z.string().min(1, 'Title is required'),
+  description: z.string().max(500, 'Description must be 500 words or less').optional(),
+  base_price: z.string().min(1, 'Price is required'),
+  currency: z.string().default('MYR'),
   duration_days: z.string().min(1, 'Duration is required'),
+  service_category: z.string().optional(),
   company_types: z.array(z.string()).default([]),
   service_offerings: z.array(z.string()).default([]),
 });
@@ -65,6 +76,15 @@ const companyTypes = [
   },
 ];
 
+const serviceCategories = [
+  'Incorporation of a new company',
+  'Monthly Company Secretary subscription',
+  'Opening of Bank Account',
+  'Appointment of Secretary',
+  'Appointment/Resignation of Director',
+  'Change of Nature of Business',
+];
+
 const serviceOfferings = [
   {
     value: 'company-secretary-subscription',
@@ -82,19 +102,19 @@ const serviceOfferings = [
     value: 'company-records-access',
     label: 'Access Company Records and SSM Forms',
     icon: <DescriptionIcon />,
-    description: '24/7 Secure Access to Business Company Records',
+    description: 'Get Secure Access to Statutory Company Records',
   },
   {
     value: 'priority-filing',
     label: 'Priority Filing',
     icon: <ScheduleIcon />,
-    description: 'Documents are pre-audited for submission and sent for e-stamping within 24 hours',
+    description: 'Documents are prioritised for submitted and swift processing - within 24 hours!',
   },
   {
     value: 'registered-office-address',
     label: 'Registered Office Address Use',
     icon: <HomeIcon />,
-    description: 'Use of SSM Compliant Registered Office Address with Optional Mail Forwarding',
+    description: 'Use of SSM-Compliant Registered Office Address with Optional Mail Forwarding',
   },
   {
     value: 'compliance-calendar',
@@ -118,9 +138,14 @@ const serviceOfferings = [
     value: 'chat-support',
     label: 'Chat Support',
     icon: <ChatIcon />,
-    description: 'Always On Chat Support for Compliance, Filing, and General Queries',
+    description: 'Always-On Chat Support for Compliance, Filing, and General Queries',
   },
 ];
+
+const durationOptions = Array.from({ length: 14 }, (_, i) => ({
+  value: (i + 1).toString(),
+  label: i === 0 ? '1 Day' : `${i + 1} days`,
+}));
 
 export default function EditSpecialistPage() {
   const router = useRouter();
@@ -135,6 +160,8 @@ export default function EditSpecialistPage() {
   const [primaryImageIndex, setPrimaryImageIndex] = useState<number | null>(null);
   const [selectedCompanyTypes, setSelectedCompanyTypes] = useState<string[]>([]);
   const [selectedOfferings, setSelectedOfferings] = useState<string[]>([]);
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState<string>('');
+  const [currency, setCurrency] = useState<string>('MYR');
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
@@ -162,14 +189,48 @@ export default function EditSpecialistPage() {
     if (currentSpecialist) {
       reset({
         title: currentSpecialist.title,
+        description: currentSpecialist.description || '',
+        base_price: currentSpecialist.base_price?.toString() || '0',
+        currency: (currentSpecialist as any).currency || 'MYR',
         duration_days: currentSpecialist.duration_days.toString(),
+        service_category: (currentSpecialist as any).service_category || '',
         company_types: [],
         service_offerings: [],
       });
+      setCurrency((currentSpecialist as any).currency || 'MYR');
+      setSelectedServiceCategory((currentSpecialist as any).service_category || '');
+      
+      // Load company types if stored
+      if ((currentSpecialist as any).company_types) {
+        try {
+          const types = typeof (currentSpecialist as any).company_types === 'string' 
+            ? JSON.parse((currentSpecialist as any).company_types) 
+            : (currentSpecialist as any).company_types;
+          setSelectedCompanyTypes(Array.isArray(types) ? types : []);
+        } catch {
+          setSelectedCompanyTypes([]);
+        }
+      }
+      
       // Load existing images if any
       if (currentSpecialist.media && currentSpecialist.media.length > 0) {
-        const imageUrls = currentSpecialist.media.map((m) => m.file_name);
+        const sortedMedia = [...currentSpecialist.media].sort((a, b) => a.display_order - b.display_order);
+        const imageUrls = sortedMedia.slice(0, 3).map((m) => {
+          if (m.file_path?.startsWith('http')) {
+            return m.file_path;
+          } else if (m.file_path) {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+            return `${apiUrl}${m.file_path}`;
+          }
+          return m.file_name;
+        });
         setImages([...imageUrls, ...Array(3 - imageUrls.length).fill(null)].slice(0, 3));
+      }
+      
+      // Load service offerings if any
+      if (currentSpecialist.service_offerings && currentSpecialist.service_offerings.length > 0) {
+        const offerings = currentSpecialist.service_offerings.map((so) => so.name || so.id);
+        setSelectedOfferings(offerings);
       }
     }
   }, [currentSpecialist, reset]);
@@ -371,77 +432,299 @@ export default function EditSpecialistPage() {
             </Box>
           </Box>
 
-          {/* Image Upload Section */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box
-              sx={{
-                border: '2px dashed #e0e0e0',
-                borderRadius: '8px',
-                p: 6,
-                textAlign: 'center',
-                backgroundColor: '#fafafa',
-                mb: 2,
-              }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                Upload an image for your service listing in PNG, JPG or JPEG - up to 10MB
+          {/* Service Images Section - 3 upload fields */}
+          {[0, 1, 2].map((index) => (
+            <Paper key={index} sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+                Service Image ({index === 0 ? '1st' : index === 1 ? '2nd' : '3rd'})
               </Typography>
-            </Box>
-            {/* Image Thumbnails */}
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 2, 
-              mt: 2,
-              flexWrap: 'wrap',
-            }}>
-              {[0, 1].map((index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    width: { xs: '100%', sm: 200 },
-                    height: { xs: 150, sm: 120 },
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '8px',
-                    backgroundColor: '#f5f5f5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+              <ImageUpload
+                label={`Service - Image (${index === 0 ? '1st' : index === 1 ? '2nd' : '3rd'})`}
+                index={index}
+                value={images[index]}
+                onChange={handleImageChange}
+                onDelete={handleImageDelete}
+                onSetPrimary={handleSetPrimary}
+                isPrimary={primaryImageIndex === index}
+              />
+            </Paper>
+          ))}
+
+          {/* TITLE Section */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              TITLE
+            </Typography>
+            <TextField
+              fullWidth
+              label="Title"
+              placeholder="Enter your service title"
+              {...register('title')}
+              error={!!errors.title}
+              helperText={errors.title?.message}
+            />
+          </Paper>
+
+          {/* DESCRIPTION Section */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              DESCRIPTION
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={6}
+              label="Description"
+              placeholder="Describe your service here"
+              {...register('description')}
+              error={!!errors.description}
+              helperText={errors.description?.message || '(500 words)'}
+              inputProps={{ maxLength: 500 * 5 }} // Approximate 500 words
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#fff',
+                },
+              }}
+            />
+          </Paper>
+
+          {/* Price Section */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              Price
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', sm: 'row' } }}>
+              <FormControl sx={{ minWidth: { xs: '100%', sm: 120 } }}>
+                <InputLabel>Currency</InputLabel>
+                <Select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  label="Currency"
+                  startAdornment={
+                    <Box component="span" sx={{ mr: 1, fontSize: '1.2rem' }}>
+                      🇲🇾
+                    </Box>
+                  }
                 >
-                  {images[index] ? (
-                    <img
-                      src={typeof images[index] === 'string' ? images[index] : URL.createObjectURL(images[index] as File)}
-                      alt={`Service ${index + 1}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
-                    />
-                  ) : (
-                    <Typography variant="caption" color="text.secondary">
-                      Image {index + 1}
-                    </Typography>
-                  )}
-                </Box>
-              ))}
+                  <MenuItem value="MYR">MYR</MenuItem>
+                  <MenuItem value="USD">USD</MenuItem>
+                  <MenuItem value="SGD">SGD</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                label="Price"
+                type="number"
+                placeholder="0.00"
+                {...register('base_price')}
+                error={!!errors.base_price}
+                helperText={errors.base_price?.message}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">{currency}</InputAdornment>,
+                }}
+              />
             </Box>
           </Paper>
 
-          {/* Description Section */}
+          {/* Estimated Completion Time Section */}
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
-              Description
+            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              Estimated Completion Time ({totalDays} Total Days)
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {currentSpecialist.description || 'Describe your service here'}
+            <FormControl fullWidth>
+              <InputLabel>Estimated Completion Time (Days)</InputLabel>
+              <Controller
+                name="duration_days"
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label="Estimated Completion Time (Days)">
+                    {durationOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Paper>
+
+          {/* Supported Company Types Section */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              Supported Company Types
             </Typography>
+            <MultiSelectDropdown
+              label="Supported Company types"
+              options={companyTypes}
+              selectedValues={selectedCompanyTypes}
+              onChange={setSelectedCompanyTypes}
+            />
+            {selectedCompanyTypes.length > 0 && (
+              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {selectedCompanyTypes.map((typeValue) => {
+                  const type = companyTypes.find((t) => t.value === typeValue);
+                  if (!type) return null;
+                  return (
+                    <Box key={typeValue} sx={{ p: 2, backgroundColor: '#fafafa', borderRadius: '8px' }}>
+                      <Typography variant="body2" fontWeight="bold" color="#222222" sx={{ mb: 0.5 }}>
+                        {type.label}:
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {type.description}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+          </Paper>
+
+          {/* Service Category Section */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              Service Category
+            </Typography>
+            <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+              Note: Can only choose 1
+            </Typography>
+            <FormControl fullWidth>
+              <InputLabel>Service category</InputLabel>
+              <Select
+                value={selectedServiceCategory}
+                onChange={(e) => setSelectedServiceCategory(e.target.value)}
+                label="Service category"
+              >
+                {serviceCategories.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Paper>
 
           {/* Additional Offerings Section */}
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2 }}>
+            <Typography variant="h6" fontWeight="bold" color="#222222" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Additional Offerings
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Enhance your service by adding additional offerings
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Service Offerings
             </Typography>
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel>Company Secretary Subscription</InputLabel>
+              <Select
+                value=""
+                label="Company Secretary Subscription"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value && !selectedOfferings.includes(value)) {
+                    setSelectedOfferings([...selectedOfferings, value]);
+                  }
+                }}
+                endAdornment={
+                  <Tooltip title="Information about service offerings">
+                    <IconButton size="small" sx={{ mr: 1 }}>
+                      <InfoIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                }
+              >
+                <MenuItem value="">Select an offering</MenuItem>
+                {serviceOfferings
+                  .filter((o) => !selectedOfferings.includes(o.value))
+                  .map((offering) => (
+                    <MenuItem key={offering.value} value={offering.value}>
+                      {offering.label}
+                    </MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+            
+            {/* Selected Offerings List */}
+            {selectedOfferings.length > 0 && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {selectedOfferings.map((offeringValue) => {
+                  const offering = serviceOfferings.find((o) => o.value === offeringValue);
+                  if (!offering) return null;
+                  return (
+                    <Box
+                      key={offeringValue}
+                      sx={{
+                        p: 2,
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                        backgroundColor: '#fafafa',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 2,
+                      }}
+                    >
+                      <Box sx={{ color: '#1976d2', mt: 0.5 }}>
+                        {offering.icon}
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" fontWeight="bold" color="#222222" sx={{ mb: 0.5 }}>
+                          {offering.label}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {offering.description}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        onClick={() => setSelectedOfferings(selectedOfferings.filter((v) => v !== offeringValue))}
+                        sx={{ color: '#d32f2f' }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+
+            {/* Available Offerings List */}
+            {selectedOfferings.length === 0 && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {serviceOfferings.map((offering) => (
+                  <Box
+                    key={offering.value}
+                    sx={{
+                      p: 2,
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '8px',
+                      backgroundColor: '#fff',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 2,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: '#fafafa',
+                      },
+                    }}
+                    onClick={() => {
+                      if (!selectedOfferings.includes(offering.value)) {
+                        setSelectedOfferings([...selectedOfferings, offering.value]);
+                      }
+                    }}
+                  >
+                    <Box sx={{ color: '#1976d2', mt: 0.5 }}>
+                      {offering.icon}
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" fontWeight="bold" color="#222222" sx={{ mb: 0.5 }}>
+                        {offering.label}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {offering.description}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Paper>
 
           {/* Company Secretary Section */}
